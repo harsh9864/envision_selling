@@ -37,6 +37,7 @@
   "items",
   "section_break_30",
   "total_qty",
+  "sales_order",
   "column_break_32",
   "total",
   "net_total",
@@ -1619,6 +1620,13 @@
    "print_hide": 1,
    "read_only": 1,
    "search_index": 1
+  },
+  {
+   "fieldname": "sales_order",
+   "fieldtype": "Link",
+   "label": "Sales Order",
+   "options": "Sales Order",
+   "read_only": 1
   }
  ],
  "icon": "fa fa-file-text",
@@ -1628,9 +1636,13 @@
    "group": "Reference",
    "link_doctype": "POS Invoice",
    "link_fieldname": "consolidated_invoice"
+  },
+  {
+   "link_doctype": "Sales Invoice",
+   "link_fieldname": "custom_proforma_invoice"
   }
  ],
- "modified": "2024-09-03 11:29:56.341146",
+ "modified": "2024-09-04 17:40:57.860262",
  "modified_by": "Administrator",
  "module": "Envision Sales",
  "name": "Proforma Invoice",

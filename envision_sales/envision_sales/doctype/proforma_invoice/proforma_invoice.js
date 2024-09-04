@@ -2,7 +2,13 @@
 // For license information, please see license.txt
 
 frappe.ui.form.on("Proforma Invoice", {
-
+	refresh: function(frm) {
+		if (frm.doc.docstatus == 1) {
+			frm.add_custom_button(__("Create Invoice"), function() {
+				create_invoice(frm.doc);
+			});
+		}
+	},
     customer:function(frm){
         debit_account = fetchCustomerAccount(frm.doc.customer,frm.doc.company);
         if (debit_account) {
@@ -159,4 +165,19 @@ function fetchCustomerAccount(customer,company){
             }
         }
     });
+}
+
+function create_invoice(proforma_invoice){
+	frappe.call({
+		method: "envision_sales.public.py.sales_doc_creator.create_sales_invoice",
+		args: {
+            proforma_invoice: proforma_invoice.name
+        },
+        callback: function(response) {
+            if (response.message) {
+                // Redirect to the newly created Proforma Invoice
+                frappe.set_route("Form", "Sales Invoice", response.message);
+            }
+        }
+	});
 }
