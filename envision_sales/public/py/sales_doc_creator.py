@@ -21,6 +21,8 @@ def create_proforma_invoice(sales_order):
         "debit_to":debit_to,
         "company": sales_order_doc.company,
         "total_qty": sales_order_doc.total_qty,
+        "po_no":sales_order_doc.po_no,
+        "po_date":sales_order_doc.po_date,
         "items": [
             {
                 "item_code": item.item_code,
@@ -99,6 +101,7 @@ def create_sales_invoice(proforma_invoice):
                 "stock_uom": item.stock_uom,
                 "income_account": income_account,
                 "expense_account": expense_account,
+                "custom_proforma_invoice": proforma_invoice_doc.name,
                 
             }
             for item in proforma_invoice_doc.items
