@@ -877,15 +877,11 @@
  "links": [
   {
    "group": "Reference",
-   "link_doctype": "POS Invoice",
-   "link_fieldname": "consolidated_invoice"
-  },
-  {
    "link_doctype": "Sales Invoice",
    "link_fieldname": "custom_proforma_invoice"
   }
  ],
- "modified": "2024-09-10 10:43:47.574706",
+ "modified": "2024-09-10 11:56:12.678473",
  "modified_by": "Administrator",
  "module": "Envision Sales",
  "name": "Proforma Invoice",
