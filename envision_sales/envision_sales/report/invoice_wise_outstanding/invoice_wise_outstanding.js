@@ -45,8 +45,8 @@ frappe.query_reports["Invoice wise Outstanding"] = {
             "fieldname": "aging_type",
             "fieldtype": "Select",
             "label": __("Aging Type"),
-            "options": "\nGreater than 30\nGreater than 60\nGreater than 90\nGreater than 180",
-            "default": "\nGreater than 30"
+            "options": "\nLess than 30\nGreater than 30\nGreater than 60\nGreater than 90\nGreater than 180",
+            "default": "Greater than 30"
         },
     ],
 
