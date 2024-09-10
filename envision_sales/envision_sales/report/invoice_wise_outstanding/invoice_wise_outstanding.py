@@ -71,6 +71,12 @@ def get_columns() -> List[Dict[str,Any]]:
 			"width":150,
 		},
 		{
+			"label": "<b>Paid Amount</b>",
+			"fieldname":"Paid Amount",
+			"fieldtype":"Currency",
+			"width":150,
+		},
+		{
 			"label": "<b>Total Outstanding Amount</b>",
 			"fieldname":"Total Outstanding Amount",
 			"fieldtype":"Currency",
@@ -113,8 +119,15 @@ def get_data(filters=None) -> List[Dict[str, Any]]:
 	voucher_type: str = filters.get("voucher_type", "")
 	voucher_id: str = filters.get("id", "")
 	aging_type: str = filters.get("aging_type", "")
+	print(f"{aging_type}")
 
 	# Base SQL query
+	# SO  ->  Sales Order
+	# PFI ->  Proforma Invoice
+	# SI  ->  Sales Invoice
+	# PR  ->  Payment Entry
+	# PER ->  Payment Entry Reference
+
 	base_query = f"""
 		SELECT 
 			SO.customer AS "Party",
@@ -167,27 +180,31 @@ def get_data(filters=None) -> List[Dict[str, Any]]:
 		ORDER BY SO.creation DESC"""
 
 	# Apply aging_type filter
-	elif aging_type == "Not Initialized":
+	elif aging_type == "":
 		filter_condition += """GROUP BY SO.name, PFI.name, SI.name,PR.name
 		ORDER BY SO.creation DESC"""
+	elif aging_type == "Less than 30":
+		filter_condition += """AND (SI.outstanding_amount > 0 AND DATEDIFF(CURDATE(), DATE(SI.creation)) < 30)
+		GROUP BY SO.name, PFI.name, SI.name,PR.name
+		ORDER BY SO.creation DESC"""
 	elif aging_type == "Greater than 30":
-		filter_condition += """AND (SI.outstanding_amount > 0 AND DATEDIFF(CURDATE(), DATE("2024-09-09")) >= 30)
+		filter_condition += """AND (SI.outstanding_amount > 0 AND DATEDIFF(CURDATE(), DATE(SI.creation)) >= 30)
 		GROUP BY SO.name, PFI.name, SI.name,PR.name
 		ORDER BY SO.creation DESC"""
 	elif aging_type == "Greater than 60":
-		filter_condition += """AND (SI.outstanding_amount > 0 AND DATEDIFF(CURDATE(), DATE("2024-09-09")) >= 60)
+		filter_condition += """AND (SI.outstanding_amount > 0 AND DATEDIFF(CURDATE(), DATE(SI.creation)) >= 60)
 		GROUP BY SO.name, PFI.name, SI.name,PR.name
 		ORDER BY SO.creation DESC"""
 	elif aging_type == "Greater than 90":
-		filter_condition += """AND (SI.outstanding_amount > 0 AND DATEDIFF(CURDATE(), DATE("2024-09-09")) >= 90)
+		filter_condition += """AND (SI.outstanding_amount > 0 AND DATEDIFF(CURDATE(), DATE(SI.creation)) >= 90)
 		GROUP BY SO.name, PFI.name, SI.name,PR.name
 		ORDER BY SO.creation DESC"""
 	elif aging_type == "Greater than 120":
-		filter_condition += """AND (SI.outstanding_amount > 0 AND DATEDIFF(CURDATE(), DATE("2024-09-09")) >= 120)
+		filter_condition += """AND (SI.outstanding_amount > 0 AND DATEDIFF(CURDATE(), DATE(SI.creation)) >= 120)
 		GROUP BY SO.name, PFI.name, SI.name,PR.name
 		ORDER BY SO.creation DESC"""
 	elif aging_type == "Greater than 180":
-		filter_condition += """AND (SI.outstanding_amount > 0 AND DATEDIFF(CURDATE(), DATE("2024-09-09")) >= 180)
+		filter_condition += """AND (SI.outstanding_amount > 0 AND DATEDIFF(CURDATE(), DATE(SI.creation)) >= 180)
 		GROUP BY SO.name, PFI.name, SI.name,PR.name
 		ORDER BY SO.creation DESC"""
 	else:
