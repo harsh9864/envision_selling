@@ -1,5 +1,5 @@
 import frappe
-
+import json
 @frappe.whitelist()
 def create_proforma_invoice(sales_order):
     sales_order_doc = frappe.get_doc("Sales Order", sales_order)
@@ -124,3 +124,20 @@ def create_sales_invoice(proforma_invoice):
 
     sales_invoice.insert()
     return sales_invoice.name
+
+@frappe.whitelist()
+def get_items_from_proforma():
+    lists = frappe.form_dict["list"]
+    list1 = json.loads(lists)
+
+    proformainvoicedata = frappe.db.sql("""
+        SELECT PFII.item_code, PFII.item_name, PFII.uom, PFII.qty, PFII.rate, PFII.amount, PFII.conversion_factor, PFII.parent
+        FROM `tabSales Invoice Item` AS PFII
+        INNER JOIN `tabUOM Conversion Detail` AS UOM
+        ON UOM.parent = PFII.item_code
+        WHERE PFII.parent IN %s
+        """
+        ,(list1,),
+        as_dict=True,
+    )
+    frappe.response["data"] = proformainvoicedata
