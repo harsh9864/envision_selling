@@ -38,6 +38,7 @@
   "base_in_words",
   "column_break5",
   "grand_total",
+  "outstanding_amount",
   "rounding_adjustment",
   "rounded_total",
   "in_words",
@@ -870,18 +871,30 @@
    "print_hide": 1,
    "read_only": 1,
    "search_index": 1
+  },
+  {
+   "fieldname": "outstanding_amount",
+   "fieldtype": "Currency",
+   "label": "Outstanding Amount",
+   "precision": "2",
+   "read_only": 1
   }
  ],
  "icon": "fa fa-file-text",
  "is_submittable": 1,
  "links": [
   {
-   "group": "Reference",
+   "group": "Sales Invoice",
    "link_doctype": "Sales Invoice",
+   "link_fieldname": "custom_proforma_invoice"
+  },
+  {
+   "group": "Payment Entry",
+   "link_doctype": "Payment Entry",
    "link_fieldname": "custom_proforma_invoice"
   }
  ],
- "modified": "2024-09-10 11:56:12.678473",
+ "modified": "2024-09-12 13:06:20.108812",
  "modified_by": "Administrator",
  "module": "Envision Sales",
  "name": "Proforma Invoice",

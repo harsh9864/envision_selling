@@ -102,6 +102,7 @@ def create_sales_invoice(proforma_invoice):
                 "income_account": income_account,
                 "expense_account": expense_account,
                 "custom_proforma_invoice": proforma_invoice_doc.name,
+                "sales_order": proforma_invoice_doc.sales_order
                 
             }
             for item in proforma_invoice_doc.items
@@ -141,3 +142,56 @@ def get_items_from_proforma():
         as_dict=True,
     )
     frappe.response["data"] = proformainvoicedata
+
+@frappe.whitelist()
+def create_payment_entry():
+    proforma_invoice_doc: Dict[str,Any] = frappe.get_doc("Proforma Invoice", frappe.form_dict["proforma_invoice"])
+    amount: float = frappe.form_dict["amount"]
+    sales_order:  Dict[str,Any] = frappe.form_dict["sales_order"]
+    company:  Dict[str,Any] = frappe.get_doc("Company", proforma_invoice_doc.company)
+    customer:  Dict[str,Any] = frappe.get_doc("Customer", proforma_invoice_doc.customer)
+    customer_default_account: str = company.default_cash_account
+    print(f"\n\n{company.name} {company.default_cash_account}\n\n")
+    for account in customer.accounts:
+        if account.company == company.name:
+            customer_default_account = account.account
+    print(f"\n\n{customer_default_account} {company.default_cash_account}\n\n")
+    # Create new Payment Entry
+    payment_entry_doc = frappe.new_doc("Payment Entry")
+
+    # Main Payment Entry fields
+    payment_entry_doc.payment_type = "Receive"
+    payment_entry_doc.mode_of_payment = "Cash"
+    payment_entry_doc.payment_date = proforma_invoice_doc.due_date
+    payment_entry_doc.party_type = "Customer"
+    payment_entry_doc.party = proforma_invoice_doc.customer
+    payment_entry_doc.paid_from = proforma_invoice_doc.debit_to
+    payment_entry_doc.paid_to = customer_default_account
+    payment_entry_doc.paid_amount = float(amount) 
+    payment_entry_doc.posting_date = proforma_invoice_doc.due_date
+    payment_entry_doc.received_amount = float(amount)  
+    payment_entry_doc.company = proforma_invoice_doc.company
+    payment_entry_doc.target_exchange_rate = 1
+    payment_entry_doc.custom_is_payment_against_proforma_invoice = 1
+    payment_entry_doc.custom_proforma_invoice = proforma_invoice_doc.name
+    # Add references to the child table with numeric allocated_amount
+    payment_entry_doc.append("references", {
+        "reference_doctype": "Sales Order",
+        "reference_name": sales_order,
+        "due_date": proforma_invoice_doc.due_date,
+        "allocated_amount": float(amount)  
+    })
+
+    # Insert the document into the database
+    payment_entry_doc.insert()
+    payment_entry_doc.save()
+    # updating_proforma_invoice_outstanding_amount(proforma_invoice_doc, float(amount) * -1)
+    frappe.msgprint(f"Payment Entry {payment_entry_doc.name} created successfully.")
+
+    return payment_entry_doc.name
+
+@frappe.whitelist()
+def updating_proforma_invoice_outstanding_amount(proforma_invoice, amount):
+    proforma_invoice_doc = frappe.get_doc("Proforma Invoice", proforma_invoice)
+    frappe.db.set_value("Proforma Invoice", proforma_invoice, "outstanding_amount", float(proforma_invoice_doc.outstanding_amount) + float(amount))
+    frappe.db.commit()
