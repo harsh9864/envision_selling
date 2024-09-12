@@ -11,7 +11,7 @@ function proforma(frm) {
         doctype: 'Proforma Invoice',
         target: frm,
         setters: {
-            customer: frm.doc.customer,
+        customer: frm.doc.customer,
         },
         add_filters_group: 1,
         date_field: "posting_date",

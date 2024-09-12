@@ -3,59 +3,91 @@
 
 frappe.ui.form.on("Proforma Invoice", {
 	refresh: function(frm) {
+		// Check if the document is submitted (docstatus == 1)
 		if (frm.doc.docstatus == 1) {
-			frm.add_custom_button(__("Create Invoice"), function() {
-				create_invoice(frm.doc);
-			});
+			// Add a custom button to create a Sales Invoice
+			frm.add_custom_button(__("Sales Invoice"), function() {
+				// Call the function to create a Sales Invoice using the current Proforma Invoice
+				create_sales_invoice(frm.doc);
+			}, __("Create"));
+
+			// Add a custom button to create a Payment Entry
+			frm.add_custom_button(__("Payment Entry"), function() {
+				// Call the function to make a Payment Entry for the current Proforma Invoice
+				make_payment_amount(frm.doc);
+			}, __("Create"));
 		}
 	},
-    customer:function(frm){
-        debit_account = fetchCustomerAccount(frm.doc.customer,frm.doc.company);
+	customer:function(frm){
+        // Fetch the customer's debit account based on the selected customer and company
+        debit_account = fetchCustomerAccount(frm.doc.customer, frm.doc.company);
+        
         if (debit_account) {
-            console.log(debit_account)
+            // If a debit account is found, log it to the console and set it in the form
             frm.set_value("debit_to", debit_account);
         }
-        else{
-            frappe.db.get_doc("Company",frm.doc.company).then(doc => {
-                console.log("Company's Default Account:", doc.default_receivable_account)
+        else {
+            // If no customer-specific account is found, fetch the default company account
+            frappe.db.get_doc("Company", frm.doc.company).then(doc => {
 				frm.set_value("debit_to", doc.default_receivable_account);
             });
         }
     },
-    
+
 	before_save:function(frm){
+		// Get the list of items in the Proforma Invoice
 		var row = frm.doc.items;
+
+		// Initialize variables to store total quantity and total amount
 		total_qty = total_amount = 0;
+
+		// Iterate over each item in the table
 		row.forEach(data => {
-			console.log(data)
+			// Calculate total quantity and total amount
 			total_qty += data.qty;
 			total_amount += data.amount;
-		})
-		console.log("Total_qty",total_qty);
-		console.log("Total_amount",total_amount);
-		frm.set_value("total_qty",total_qty);
-		frm.set_value("total",total_amount);
-		frm.set_value("net_total",total_amount);
-		frm.set_value("grand_total",total_amount);
-		frm.set_value("base_grand_total",total_amount);
-		frm.set_value("base_rounding_adjustment",total_amount);
-		frm.set_value("base_rounded_total",total_amount);
+		});
+
+		// Set calculated totals on the form fields
+		frm.set_value("total_qty", total_qty);
+		frm.set_value("total", total_amount);
+		frm.set_value("net_total", total_amount);
+		frm.set_value("grand_total", total_amount);
+		frm.set_value("outstanding_amount", total_amount);
+		frm.set_value("base_grand_total", total_amount);
+		frm.set_value("base_rounding_adjustment", total_amount);
+		frm.set_value("base_rounded_total", total_amount);
 	},
 });
 
 frappe.ui.form.on("Sales Invoice Item", {
+    // Triggered when the item_code field is changed
 	item_code: function(frm, cdt, cdn) {
+		// Get the current row data (child table entry) using cdt (doctype) and cdn (docname)
 		const item_data = locals[cdt][cdn];
+
+		// Set the 'qty' field in the items grid as mandatory
 		frm.fields_dict['items'].grid.update_docfield_property('qty', 'mandatory', 1);
+
+		// Refresh the 'items' field to reflect the changes
 		frm.refresh_field("items");
+
+		// Call a custom function to fetch additional data for the selected item code
 		fetchItemData(frm, cdt, cdn, item_data.item_code);
 	},
+
+    // Triggered when the qty (quantity) field is changed
 	qty: function(frm, cdt, cdn) {
+		// Get the current row data for the quantity and rate
 		const item_data = locals[cdt][cdn];
+		// Call a custom function to calculate and update amounts based on the new quantity and rate
 		calculateAndSetAmounts(frm, cdt, cdn, item_data.qty, item_data.rate);
 	},
+    // Triggered when the rate field is changed
 	rate: function(frm, cdt, cdn) {
+		// Get the current row data for the quantity and rate
 		const item_data = locals[cdt][cdn];
+		// Call a custom function to calculate and update amounts based on the new rate and quantity
 		calculateAndSetAmounts(frm, cdt, cdn, item_data.qty, item_data.rate);
 	}
 });
@@ -167,17 +199,83 @@ function fetchCustomerAccount(customer,company){
     });
 }
 
-function create_invoice(proforma_invoice){
-	frappe.call({
-		method: "envision_sales.public.py.sales_doc_creator.create_sales_invoice",
-		args: {
-            proforma_invoice: proforma_invoice.name
+function create_sales_invoice(proforma_invoice) {
+    // Make a server-side call to create a Sales Invoice based on the given Proforma Invoice
+    frappe.call({
+        method: "envision_sales.public.py.sales_doc_creator.create_sales_invoice",  // Specify the method to be called
+        args: {
+            proforma_invoice: proforma_invoice.name  // Pass the name of the Proforma Invoice as an argument
         },
         callback: function(response) {
+            // This function runs after the server responds
             if (response.message) {
-                // Redirect to the newly created Proforma Invoice
+                // If a Sales Invoice is successfully created, redirect to the newly created Sales Invoice
                 frappe.set_route("Form", "Sales Invoice", response.message);
             }
         }
-	});
+    });
+}
+
+function make_payment_amount(proforma_invoice) {
+    // Create a dialog to capture the payment details from the user
+    let d = new frappe.ui.Dialog({
+        title: 'Enter details',
+        fields: [
+            {
+                label: 'Payment Amount',  // Field for entering the payment amount
+                fieldname: 'payment_amount',
+                fieldtype: 'Currency'
+            },
+            {
+                label: 'Work Order',  // Field for entering/selecting the related Sales Order (work order)
+                fieldname: 'work_order',
+                fieldtype: 'Link',
+                options: 'Sales Order',
+                default: proforma_invoice.sales_order,  // Set the default to the sales order from the proforma_invoice
+            },
+        ],
+        size: 'small',  // Size of the dialog
+        primary_action_label: 'Submit',  // Label for the primary button in the dialog
+        primary_action(values) {
+            // This function is triggered when the user clicks the "Submit" button
+            var amount = values.payment_amount;
+
+            // Check if the entered amount is greater than the outstanding amount
+            if (amount > proforma_invoice.outstanding_amount) {
+                frappe.throw("Amount can't be greater than outstanding amount");
+                return 0;  // Stop execution if amount is invalid
+            }
+            // Check if the entered amount is zero
+			else if (amount == 0) {
+				frappe.throw("Payment Amount can't be zero");
+				return 0;  // Stop execution if amount is zero
+			}
+
+            d.hide();  // Hide the dialog after successful validation
+            create_payment(proforma_invoice, amount);  // Call the function to create the payment
+        }
+    });
+
+    d.show();  // Show the dialog to the user
+}
+
+function create_payment(proforma_invoice, amount) {
+    // Call the server-side method to create a Payment Entry
+    frappe.call({
+        method: "envision_sales.public.py.sales_doc_creator.create_payment_entry",  // Method to create payment entry
+        args: {
+            proforma_invoice: proforma_invoice.name,  // Pass the proforma invoice name as an argument
+            amount: amount,  // Pass the payment amount
+            sales_order: proforma_invoice.sales_order  // Pass the associated sales order
+        },
+        callback: function(response) {
+            // This function runs after the server responds
+            if (response.message) {
+                // If a Payment Entry was successfully created, navigate to its form
+				
+                frappe.set_route("Form", "Payment Entry", response.message);
+            }
+        }
+    });
+	
 }
