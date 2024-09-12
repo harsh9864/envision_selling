@@ -232,6 +232,7 @@ function make_payment_amount(proforma_invoice) {
                 fieldtype: 'Link',
                 options: 'Sales Order',
                 default: proforma_invoice.sales_order,  // Set the default to the sales order from the proforma_invoice
+				reqd: 1
             },
         ],
         size: 'small',  // Size of the dialog
