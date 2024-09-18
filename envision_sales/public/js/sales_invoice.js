@@ -3,7 +3,26 @@ frappe.ui.form.on("Sales Invoice", {
         frm.add_custom_button('Proforma Invoice', () => {
             proforma(frm);            
         }, 'Get Items From');
+        frm.set_query("custom_sales_order", function() {
+            return {
+                filters: {
+                    'docstatus': ['=', 1]
+                }
+            }
+        })
+    },
+    after_save: function(frm) {
+        if(frm.doc.custom_dependent_sales_order && frm.doc.custom_sales_order){
+            frappe.call({
+                method:"envision_sales.envision_sales.doctype.proforma_invoice.proforma_invoice.update_outstanding_total_in_SO",
+                args:{
+                    sales_order:frm.doc.custom_sales_order,
+                    grand_total:frm.doc.net_total
+                },
+            });
+        }
     }
+
 });
 
 function proforma(frm) {

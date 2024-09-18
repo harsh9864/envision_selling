@@ -6,7 +6,11 @@ frappe.ui.form.on("Sales Order", {
                 proforma_invoice_creation(frm.doc);
             }, __("Create"));
         }
-    }
+    },
+    before_save:function(frm){
+        console.log(frm.doc.net_total);
+        frm.set_value("custom_outstanding_total", frm.doc.net_total);
+    },
 });
 
 function proforma_invoice_creation(sales_order) {

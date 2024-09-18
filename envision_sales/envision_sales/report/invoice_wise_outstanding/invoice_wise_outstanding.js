@@ -33,7 +33,7 @@ frappe.query_reports["Invoice wise Outstanding"] = {
             "fieldname": "id",
             "label": __("ID"),
             "fieldtype": "Link",
-            "options": "Sales Order",  // Default option, will be updated dynamically
+            "options": "Sales Order",
         },
         {
             "fieldname": "customer",
@@ -46,7 +46,7 @@ frappe.query_reports["Invoice wise Outstanding"] = {
             "fieldtype": "Select",
             "label": __("Aging Type"),
             "options": "\nLess than 30\nGreater than 30\nGreater than 60\nGreater than 90\nGreater than 180",
-            "default": "Greater than 30"
+            // "default": "Greater than 30"
         },
     ],
 

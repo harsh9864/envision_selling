@@ -156,7 +156,7 @@ def get_data(filters=None) -> List[Dict[str, Any]]:
 		LEFT JOIN `tabProforma Invoice` AS PFI ON PFI.sales_order = SO.name
 		LEFT JOIN `tabSales Invoice Item` AS SII ON PFI.name = SII.custom_proforma_invoice
 		LEFT JOIN `tabSales Invoice` AS SI ON SI.name = SII.parent
-		LEFT JOIN `tabPayment Entry Reference` AS PER ON PER.reference_name = SI.name
+		LEFT JOIN `tabPayment Entry Reference` AS PER ON (PER.reference_name = SI.name OR PER.reference_name = SO.name)
 		LEFT JOIN `tabPayment Entry` AS PR ON PR.name = PER.parent
 		WHERE SO.docstatus = 1
 		AND (SO.company = "{company}" OR "{company}" = "")

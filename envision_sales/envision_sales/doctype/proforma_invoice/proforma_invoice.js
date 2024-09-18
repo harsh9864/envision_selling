@@ -47,7 +47,6 @@ frappe.ui.form.on("Proforma Invoice", {
 			total_qty += data.qty;
 			total_amount += data.amount;
 		});
-
 		// Set calculated totals on the form fields
 		frm.set_value("total_qty", total_qty);
 		frm.set_value("total", total_amount);
@@ -57,7 +56,31 @@ frappe.ui.form.on("Proforma Invoice", {
 		frm.set_value("base_grand_total", total_amount);
 		frm.set_value("base_rounding_adjustment", total_amount);
 		frm.set_value("base_rounded_total", total_amount);
+		if(total_amount > frm.doc.sales_order_grand_total){
+			frappe.throw(__("Grand Total Amount can't be greater than Sales Order Grand Total"));
+			
+		}
 	},
+
+
+	before_submit: function(frm) {
+        // Ensure sales_order_grand_total and total_amount are available
+        if (frm.doc.sales_order && frm.doc.sales_order_grand_total && frm.doc.total_amount) {
+            // Check if the Proforma Invoice total is greater than the Sales Order grand total
+            if (frm.doc.total_amount > frm.doc.sales_order_grand_total) {
+                frappe.throw(__("Grand Total Amount can't be greater than Sales Order Grand Total"));
+            }
+        }
+    },
+	on_submit: function(frm) {
+		frappe.call({
+			method:"envision_sales.envision_sales.doctype.proforma_invoice.proforma_invoice.update_outstanding_total_in_SO",
+			args:{
+				sales_order:frm.doc.sales_order,
+				grand_total:frm.doc.grand_total
+			},
+		});
+	}
 });
 
 frappe.ui.form.on("Sales Invoice Item", {
