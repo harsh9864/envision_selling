@@ -28,6 +28,7 @@
   "section_break_30",
   "total_qty",
   "sales_order",
+  "sales_order_grand_total",
   "column_break_32",
   "total",
   "net_total",
@@ -878,6 +879,13 @@
    "label": "Outstanding Amount",
    "precision": "2",
    "read_only": 1
+  },
+  {
+   "fetch_from": "sales_order.custom_outstanding_total",
+   "fieldname": "sales_order_grand_total",
+   "fieldtype": "Data",
+   "label": "Sales Order Grand Total",
+   "read_only": 1
   }
  ],
  "icon": "fa fa-file-text",
@@ -894,7 +902,7 @@
    "link_fieldname": "custom_proforma_invoice"
   }
  ],
- "modified": "2024-09-12 13:06:20.108812",
+ "modified": "2024-09-17 16:54:58.774360",
  "modified_by": "Administrator",
  "module": "Envision Sales",
  "name": "Proforma Invoice",
