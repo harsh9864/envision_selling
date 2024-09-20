@@ -11,7 +11,7 @@ frappe.ui.form.on("Sales Invoice", {
             }
         })
     },
-    after_save: function(frm) {
+    on_submit: function(frm) {
         if(frm.doc.custom_dependent_sales_order && frm.doc.custom_sales_order){
             frappe.call({
                 method:"envision_sales.envision_sales.doctype.proforma_invoice.proforma_invoice.update_outstanding_total_in_SO",
