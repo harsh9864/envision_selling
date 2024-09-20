@@ -62,13 +62,12 @@ frappe.ui.form.on("Proforma Invoice", {
 		}
 	},
 
-
 	before_submit: function(frm) {
         // Ensure sales_order_grand_total and total_amount are available
         if (frm.doc.sales_order && frm.doc.sales_order_grand_total && frm.doc.total_amount) {
             // Check if the Proforma Invoice total is greater than the Sales Order grand total
             if (frm.doc.total_amount > frm.doc.sales_order_grand_total) {
-                frappe.throw(__("Grand Total Amount can't be greater than Sales Order Grand Total"));
+                frappe.throw(__("Grand Total Amount can't be greater than Sales Order's Net Total"));
             }
         }
     },
