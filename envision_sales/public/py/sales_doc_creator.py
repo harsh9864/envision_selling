@@ -10,6 +10,7 @@ def create_proforma_invoice(sales_order):
     proforma_invoice = frappe.get_doc({
         "doctype": "Proforma Invoice",
         "customer": sales_order_doc.customer,
+        "department":sales_order_doc.department,
         "sales_order": sales_order_doc.name,
         "grand_total": sales_order_doc.total,
         "total": sales_order_doc.total,
@@ -81,6 +82,7 @@ def create_sales_invoice(proforma_invoice):
         "due_date":proforma_invoice_doc.due_date,
         "project": proforma_invoice_doc.project,
         "cost_center": proforma_invoice_doc.cost_center,
+        "department":proforma_invoice_doc.department,
         "debit_to":debit_to,
         "company": proforma_invoice_doc.company,
         "total_qty": proforma_invoice_doc.total_qty,

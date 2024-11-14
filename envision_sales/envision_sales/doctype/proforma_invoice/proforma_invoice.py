@@ -38,8 +38,6 @@ def update_outstanding_total_in_SO():
         # Commit the changes to the database
         frappe.db.commit()
 
-        frappe.msgprint(_("Custom Outstanding Total updated successfully."))
-
     except Exception as e:
         frappe.log_error(message=str(e), title="Error in updating Sales Order Outstanding Amount")
         frappe.throw(_("An error occurred: {0}").format(str(e)))

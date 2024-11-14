@@ -21,6 +21,7 @@
   "due_date",
   "accounting_dimensions_section",
   "project",
+  "department",
   "dimension_col_break",
   "cost_center",
   "section_break_42",
@@ -886,6 +887,12 @@
    "fieldtype": "Data",
    "label": "Sales Order Grand Total",
    "read_only": 1
+  },
+  {
+   "fieldname": "department",
+   "fieldtype": "Link",
+   "label": "Department",
+   "options": "Department"
   }
  ],
  "icon": "fa fa-file-text",
@@ -902,7 +909,7 @@
    "link_fieldname": "custom_proforma_invoice"
   }
  ],
- "modified": "2024-09-17 16:54:58.774360",
+ "modified": "2024-10-08 15:08:50.936867",
  "modified_by": "Administrator",
  "module": "Envision Sales",
  "name": "Proforma Invoice",
