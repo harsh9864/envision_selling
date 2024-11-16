@@ -23,6 +23,7 @@ def create_proforma_invoice(sales_order):
         "total_qty": sales_order_doc.total_qty,
         "po_no":sales_order_doc.po_no,
         "po_date":sales_order_doc.po_date,
+        "department":sales_order_doc.department,
         "items": [
             {
                 "item_code": item.item_code,
@@ -84,6 +85,7 @@ def create_sales_invoice(proforma_invoice):
         "debit_to":debit_to,
         "company": proforma_invoice_doc.company,
         "total_qty": proforma_invoice_doc.total_qty,
+        "department":proforma_invoice_doc.department,
         "items": [
             {
                 "item_code": item.item_code,
