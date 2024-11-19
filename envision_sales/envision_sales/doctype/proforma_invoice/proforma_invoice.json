@@ -270,6 +270,7 @@
    "hide_days": 1,
    "hide_seconds": 1,
    "in_global_search": 1,
+   "in_list_view": 1,
    "label": "Project",
    "oldfieldname": "project_name",
    "oldfieldtype": "Link",
@@ -308,6 +309,7 @@
    "fieldtype": "Float",
    "hide_days": 1,
    "hide_seconds": 1,
+   "in_list_view": 1,
    "label": "Total Quantity",
    "read_only": 1
   },
@@ -877,6 +879,7 @@
   {
    "fieldname": "outstanding_amount",
    "fieldtype": "Currency",
+   "in_list_view": 1,
    "label": "Outstanding Amount",
    "precision": "2",
    "read_only": 1
@@ -909,7 +912,7 @@
    "link_fieldname": "custom_proforma_invoice"
   }
  ],
- "modified": "2024-10-08 15:08:50.936867",
+ "modified": "2024-11-14 19:42:32.966717",
  "modified_by": "Administrator",
  "module": "Envision Sales",
  "name": "Proforma Invoice",
