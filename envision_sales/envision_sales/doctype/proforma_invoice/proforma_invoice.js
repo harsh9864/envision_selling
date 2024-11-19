@@ -57,20 +57,24 @@ frappe.ui.form.on("Proforma Invoice", {
 		frm.set_value("base_rounding_adjustment", total_amount);
 		frm.set_value("base_rounded_total", total_amount);
 		if(total_amount > frm.doc.sales_order_grand_total){
-			frappe.throw(__("Grand Total Amount can't be greater than Sales Order Grand Total"));
-			
+			frappe.throw({
+				title: __("Overbilling"),
+				message: __("The Sum of all Proforma Invoices should be less or equal to Sales Order Grand Total.")
+			});
 		}
 	},
 
 	before_submit: function(frm) {
-        // Ensure sales_order_grand_total and total_amount are available
-        if (frm.doc.sales_order && frm.doc.sales_order_grand_total && frm.doc.total_amount) {
-            // Check if the Proforma Invoice total is greater than the Sales Order grand total
-            if (frm.doc.total_amount > frm.doc.sales_order_grand_total) {
-                frappe.throw(__("Grand Total Amount can't be greater than Sales Order's Net Total"));
-            }
-        }
-    },
+		// Ensure required fields are present and properly validated
+		if (frm.doc.sales_order && frm.doc.sales_order_grand_total && frm.doc.total_amount) {
+			if (frm.doc.total_amount > frm.doc.sales_order_grand_total) {
+				frappe.throw({
+					title: __("Overbilling"),
+					message: __("The Sum of all Proforma Invoices should be less or equal to Sales Order Grand Total.")
+				});
+			}
+		}
+	},	
 	on_submit: function(frm) {
 		frappe.call({
 			method:"envision_sales.envision_sales.doctype.proforma_invoice.proforma_invoice.update_outstanding_total_in_SO",
@@ -265,8 +269,9 @@ function make_payment_amount(proforma_invoice) {
 
             // Check if the entered amount is greater than the outstanding amount
             if (amount > proforma_invoice.outstanding_amount) {
-                frappe.throw("Amount can't be greater than outstanding amount");
-                return 0;  // Stop execution if amount is invalid
+                frappe.throw("Payment Amount should be less or equal to Proforma Invoice");
+				// Stop execution if amount is invalid
+                return 0;  
             }
             // Check if the entered amount is zero
 			else if (amount == 0) {

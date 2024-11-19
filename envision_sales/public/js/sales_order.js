@@ -8,8 +8,7 @@ frappe.ui.form.on("Sales Order", {
         }
     },
     before_save:function(frm){
-        console.log(frm.doc.net_total);
-        frm.set_value("custom_outstanding_total", frm.doc.net_total);
+        frm.set_value("custom_outstanding_total", frm.doc.grand_total);
     },
 });
 
