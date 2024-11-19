@@ -37,10 +37,8 @@ frappe.ui.form.on("Proforma Invoice", {
 	before_save:function(frm){
 		// Get the list of items in the Proforma Invoice
 		var row = frm.doc.items;
-
 		// Initialize variables to store total quantity and total amount
 		total_qty = total_amount = 0;
-
 		// Iterate over each item in the table
 		row.forEach(data => {
 			// Calculate total quantity and total amount
@@ -63,7 +61,6 @@ frappe.ui.form.on("Proforma Invoice", {
 			});
 		}
 	},
-
 	before_submit: function(frm) {
 		// Ensure required fields are present and properly validated
 		if (frm.doc.sales_order && frm.doc.sales_order_grand_total && frm.doc.total_amount) {
