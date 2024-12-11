@@ -33,6 +33,15 @@
   "column_break_32",
   "total",
   "net_total",
+  "taxes_and_charges_section",
+  "tax_category",
+  "sales_taxes_and_charges_template",
+  "column_break_nkud",
+  "shipping_rule",
+  "column_break_wzcf",
+  "incoterm",
+  "section_break_plna",
+  "taxes_and_charges",
   "totals",
   "base_grand_total",
   "base_rounding_adjustment",
@@ -887,7 +896,7 @@
   {
    "fetch_from": "sales_order.custom_outstanding_total",
    "fieldname": "sales_order_grand_total",
-   "fieldtype": "Data",
+   "fieldtype": "Currency",
    "label": "Unbilled Sales Order (including Tax)",
    "read_only": 1
   },
@@ -897,6 +906,53 @@
    "label": "Department",
    "options": "Department",
    "reqd": 1
+  },
+  {
+   "fieldname": "taxes_and_charges_section",
+   "fieldtype": "Section Break",
+   "label": "Taxes and Charges"
+  },
+  {
+   "fieldname": "tax_category",
+   "fieldtype": "Link",
+   "label": "Tax Category",
+   "options": "Tax Category"
+  },
+  {
+   "fieldname": "shipping_rule",
+   "fieldtype": "Link",
+   "label": "Shipping Rule",
+   "options": "Shipping Rule"
+  },
+  {
+   "fieldname": "column_break_nkud",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "sales_taxes_and_charges_template",
+   "fieldtype": "Link",
+   "label": "Sales Taxes and Charges Template",
+   "options": "Sales Taxes and Charges Template"
+  },
+  {
+   "fieldname": "column_break_wzcf",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "incoterm",
+   "fieldtype": "Link",
+   "label": "Incoterm",
+   "options": "Incoterm"
+  },
+  {
+   "fieldname": "section_break_plna",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "taxes_and_charges",
+   "fieldtype": "Table",
+   "label": "Sales Taxes and Charges",
+   "options": "Sales Taxes and Charges"
   }
  ],
  "icon": "fa fa-file-text",
@@ -913,7 +969,7 @@
    "link_fieldname": "custom_proforma_invoice"
   }
  ],
- "modified": "2024-11-14 19:42:32.966717",
+ "modified": "2024-11-22 12:53:23.959714",
  "modified_by": "Administrator",
  "module": "Envision Sales",
  "name": "Proforma Invoice",

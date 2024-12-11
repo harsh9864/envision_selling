@@ -17,19 +17,109 @@ frappe.ui.form.on("Proforma Invoice", {
 				make_payment_amount(frm.doc);
 			}, __("Create"));
 		}
+
+		// Set the query for the "sales_taxes_and_charges_template" field
+		frm.set_query("sales_taxes_and_charges_template", function(){
+			return {
+			"filters": [
+				["Sales Taxes and Charges Template", "company", "=", frm.doc.company],
+			]
+			}
+			});
+		// Set the query for the "shipping_rule" field
+		frm.set_query("shipping_rule", function(){
+			return {
+			"filters": [
+				["Shipping Rule", "company", "=", frm.doc.company],
+				["Shipping Rule", "shipping_rule_type", "=", "Selling"]
+			]
+			}
+			});
+		// Set the query for the "project" field
+		frm.set_query("project", function(){
+			return {
+			"filters": [
+				["Project", "company", "=", frm.doc.company],
+			]
+			}
+			});
+		// Set the query for the "cost_center" field
+		frm.set_query("cost_center", function(){
+			return {
+			"filters": [
+				["Cost Center", "company", "=", frm.doc.company],
+			]
+			}
+			});
+		frm.fields_dict['items'].grid.update_docfield_property(
+			'cost_center', 'reqd', 0
+		);
+		frm.fields_dict['items'].grid.update_docfield_property(
+			'qty', 'reqd', 1
+		);
+		frm.fields_dict['items'].grid.update_docfield_property(
+			'income_account', 'reqd', 0
+		);
+		frm.fields_dict['items'].grid.update_docfield_property(
+			'amount', 'reqd', 0
+		);
+		frm.refresh_field("items");
 	},
 	customer:function(frm){
         // Fetch the customer's debit account based on the selected customer and company
         debit_account = fetchCustomerAccount(frm.doc.customer, frm.doc.company);
-        
-        if (debit_account) {
+        console.log(debit_account);
+        if (debit_account != null) {
             // If a debit account is found, log it to the console and set it in the form
             frm.set_value("debit_to", debit_account);
         }
         else {
-            // If no customer-specific account is found, fetch the default company account
-            frappe.db.get_doc("Company", frm.doc.company).then(doc => {
-				frm.set_value("debit_to", doc.default_receivable_account);
+            frappe.db.get_value("Company", frm.doc.company, "default_receivable_account")
+			.then((response) => {
+			let account = response.message.default_receivable_account;
+			frm.set_value("debit_to", account);
+		});
+        }
+    },
+
+	sales_taxes_and_charges_template: function (frm) {
+        if (frm.doc.sales_taxes_and_charges_template) {
+            frappe.call({
+                method: "frappe.client.get",
+                args: {
+                    doctype: "Sales Taxes and Charges Template",
+                    name: frm.doc.sales_taxes_and_charges_template,
+                },
+                callback: function (response) {
+                    if (response.message) {
+                        const tax_template = response.message;
+                        frm.clear_table("taxes_and_charges");
+                        tax_template.taxes.forEach(tax => {
+                            frm.add_child("taxes_and_charges", {
+                                charge_type: tax.charge_type,
+                                account_head: tax.account_head,
+                                description: tax.description,
+                                rate: tax.rate,
+                                tax_amount: tax.tax_amount,
+                                cost_center: tax.cost_center,
+                            });
+                        });
+                        frm.refresh_field("taxes_and_charges");
+                    }
+                },
+                error: function (error) {
+                    frappe.msgprint({
+                        title: __("Error"),
+                        indicator: "red",
+                        message: __("Unable to fetch the Sales Taxes and Charges Template."),
+                    });
+                },
+            });
+        } else {
+            frappe.msgprint({
+                title: __("Missing Template"),
+                indicator: "orange",
+                message: __("Please select a Sales Taxes and Charges Template."),
             });
         }
     },
@@ -84,17 +174,9 @@ frappe.ui.form.on("Proforma Invoice", {
 });
 
 frappe.ui.form.on("Sales Invoice Item", {
-    // Triggered when the item_code field is changed
 	item_code: function(frm, cdt, cdn) {
 		// Get the current row data (child table entry) using cdt (doctype) and cdn (docname)
 		const item_data = locals[cdt][cdn];
-
-		// Set the 'qty' field in the items grid as mandatory
-		frm.fields_dict['items'].grid.update_docfield_property('qty', 'mandatory', 1);
-
-		// Refresh the 'items' field to reflect the changes
-		frm.refresh_field("items");
-
 		// Call a custom function to fetch additional data for the selected item code
 		fetchItemData(frm, cdt, cdn, item_data.item_code);
 	},
@@ -112,6 +194,37 @@ frappe.ui.form.on("Sales Invoice Item", {
 		const item_data = locals[cdt][cdn];
 		// Call a custom function to calculate and update amounts based on the new rate and quantity
 		calculateAndSetAmounts(frm, cdt, cdn, item_data.qty, item_data.rate);
+	}
+});
+
+frappe.ui.form.on("Sales Taxes and Charges", {
+	charge_type: function (frm, cdt, cdn) {
+        let row = locals[cdt][cdn];
+        
+        if (row.charge_type === "Actual") {
+            frm.fields_dict['taxes_and_charges'].grid.update_docfield_property(
+                'rate', 'hidden', 1
+            );
+        }
+		else if(row.charge_type === "On Net Total"){
+			frm.fields_dict['taxes_and_charges'].grid.update_docfield_property(
+                'tax_amount', 'hidden', 1
+            );
+		}
+        else{
+			frm.fields_dict['taxes_and_charges'].grid.update_docfield_property(
+				'rate', 'hidden', 0
+			);
+			frm.fields_dict['taxes_and_charges'].grid.update_docfield_property(
+                'tax_amount', 'hidden', 0
+            );
+		}
+        
+        frm.refresh_field('taxes_and_charges');
+    },
+
+	rate:function(frm, cdt, cdn){
+		
 	}
 });
 
@@ -155,30 +268,58 @@ function setItemFields(frm, cdt, cdn, result_data) {
 	}
 }
 
-function setAccountFields(frm, cdt, cdn, result_data) {
-	if (result_data.item_defaults && result_data.item_defaults.length > 0) {
-		result_data.item_defaults.forEach(data => {
-			if(data.company == frm.doc.company){
-				if(data.income_account || data.expense_account) {
-					frappe.model.set_value(cdt, cdn, 'income_account', data.income_account || getCompanyDefault(frm.doc.company, 'default_income_account'));
-					frappe.model.set_value(cdt, cdn, 'expense_account', data.expense_account || getCompanyDefault(frm.doc.company, 'default_expense_account'));
-				} else {
-					setDefaultAccounts(frm, cdt, cdn);
-				}
-			}
-		});
-	}
+async function setAccountFields(frm, cdt, cdn, result_data) {
+    if (result_data.item_defaults && result_data.item_defaults.length > 0) {
+        for (const data of result_data.item_defaults) {
+            if (data.company === frm.doc.company) {
+                if (data.income_account || data.expense_account) {
+                    frappe.model.set_value(
+                        cdt,
+                        cdn,
+                        'income_account',
+                        data.income_account || await getCompanyDefault(frm.doc.company, 'default_income_account')
+                    );
+                    frappe.model.set_value(
+                        cdt,
+                        cdn,
+                        'expense_account',
+                        data.expense_account || await getCompanyDefault(frm.doc.company, 'default_expense_account')
+                    );
+                } else {
+                    // Call async setDefaultAccounts and wait for its result
+                    const accounts = await setDefaultAccounts(frm, cdt, cdn);
+                    console.log("Accounts fetched:", accounts);
+                }
+            }
+        }
+    }
 }
 
-function setDefaultAccounts(frm, cdt, cdn) {
-	getCompanyDefaults(frm.doc.company).then(doc => {
-		frappe.model.set_value(cdt, cdn, 'income_account', doc.default_income_account);
-		frappe.model.set_value(cdt, cdn, 'expense_account', doc.default_expense_account);
-	});
-}
 
-function getCompanyDefaults(company) {
-	return frappe.db.get_doc('Company', company);
+async function setDefaultAccounts(frm, cdt, cdn) {
+    try {
+        const [expenseResponse, incomeResponse] = await Promise.all([
+            frappe.db.get_value("Company", frm.doc.company, "default_expense_account"),
+            frappe.db.get_value("Company", frm.doc.company, "default_income_account")
+        ]);
+
+        const default_expense_account = expenseResponse.message.default_expense_account;
+        const default_income_account = incomeResponse.message.default_income_account;
+		console.log(default_expense_account);
+		console.log(default_income_account);
+        // Set the values in the child table
+        frappe.model.set_value(cdt, cdn, 'expense_account', default_expense_account);
+        frappe.model.set_value(cdt, cdn, 'income_account', default_income_account);
+
+        // Return the values as an object
+        return {
+            default_expense_account,
+            default_income_account
+        };
+    } catch (error) {
+        console.error("Error fetching default accounts:", error);
+        throw error; // Rethrow the error if needed
+    }
 }
 
 function getCompanyDefault(company, fieldname) {
@@ -216,6 +357,9 @@ function fetchCustomerAccount(customer,company){
                         console.log(data.account)
                         return data.account
                     }
+					else{
+						return null
+					}
                 });
             }
         }
