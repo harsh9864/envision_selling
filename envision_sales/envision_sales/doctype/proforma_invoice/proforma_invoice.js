@@ -98,10 +98,12 @@ frappe.ui.form.on("Proforma Invoice", {
                             frm.add_child("taxes_and_charges", {
                                 charge_type: tax.charge_type,
                                 account_head: tax.account_head,
-                                description: tax.description,
+                                description: ("..." || tax.charge_type),
                                 rate: tax.rate,
                                 tax_amount: tax.tax_amount,
                                 cost_center: tax.cost_center,
+								included_in_print_rate: tax.included_in_print_rate,
+								row_id: tax.row_id,
                             });
                         });
                         frm.refresh_field("taxes_and_charges");
@@ -125,26 +127,26 @@ frappe.ui.form.on("Proforma Invoice", {
     },
 
 	before_save:function(frm){
-		// Get the list of items in the Proforma Invoice
 		var row = frm.doc.items;
-		// Initialize variables to store total quantity and total amount
 		total_qty = total_amount = 0;
-		// Iterate over each item in the table
 		row.forEach(data => {
-			// Calculate total quantity and total amount
 			total_qty += data.qty;
 			total_amount += data.amount;
 		});
-		// Set calculated totals on the form fields
+		let tax_total = frm.doc.taxes_and_charges.reduce((sum, tax_row) => {
+			return sum + (tax_row.tax_amount || 0);
+		}, 0);
+		frm.set_value('total_taxes_and_charges', tax_total || 0);
+		frm.refresh_field('taxes_and_charges');
 		frm.set_value("total_qty", total_qty);
 		frm.set_value("total", total_amount);
 		frm.set_value("net_total", total_amount);
-		frm.set_value("grand_total", total_amount);
+		frm.set_value("grand_total", total_amount + frm.doc.total_taxes_and_charges);
 		frm.set_value("outstanding_amount", total_amount);
 		frm.set_value("base_grand_total", total_amount);
 		frm.set_value("base_rounding_adjustment", total_amount);
 		frm.set_value("base_rounded_total", total_amount);
-		if(total_amount > frm.doc.sales_order_grand_total){
+		if(frm.doc.grand_total > frm.doc.sales_order_grand_total){
 			frappe.throw({
 				title: __("Overbilling"),
 				message: __("The Sum of all Proforma Invoices should be less or equal to Sales Order Grand Total.")
@@ -154,7 +156,7 @@ frappe.ui.form.on("Proforma Invoice", {
 	before_submit: function(frm) {
 		// Ensure required fields are present and properly validated
 		if (frm.doc.sales_order && frm.doc.sales_order_grand_total && frm.doc.total_amount) {
-			if (frm.doc.total_amount > frm.doc.sales_order_grand_total) {
+			if (frm.doc.grand_total > frm.doc.sales_order_grand_total) {
 				frappe.throw({
 					title: __("Overbilling"),
 					message: __("The Sum of all Proforma Invoices should be less or equal to Sales Order Grand Total.")
@@ -175,58 +177,166 @@ frappe.ui.form.on("Proforma Invoice", {
 
 frappe.ui.form.on("Sales Invoice Item", {
 	item_code: function(frm, cdt, cdn) {
-		// Get the current row data (child table entry) using cdt (doctype) and cdn (docname)
 		const item_data = locals[cdt][cdn];
-		// Call a custom function to fetch additional data for the selected item code
 		fetchItemData(frm, cdt, cdn, item_data.item_code);
 	},
 
-    // Triggered when the qty (quantity) field is changed
 	qty: function(frm, cdt, cdn) {
-		// Get the current row data for the quantity and rate
 		const item_data = locals[cdt][cdn];
-		// Call a custom function to calculate and update amounts based on the new quantity and rate
 		calculateAndSetAmounts(frm, cdt, cdn, item_data.qty, item_data.rate);
 	},
-    // Triggered when the rate field is changed
+    
 	rate: function(frm, cdt, cdn) {
-		// Get the current row data for the quantity and rate
 		const item_data = locals[cdt][cdn];
-		// Call a custom function to calculate and update amounts based on the new rate and quantity
 		calculateAndSetAmounts(frm, cdt, cdn, item_data.qty, item_data.rate);
 	}
 });
 
 frappe.ui.form.on("Sales Taxes and Charges", {
-	charge_type: function (frm, cdt, cdn) {
+
+	form_render: function (frm, cdt, cdn) {
+		frm.fields_dict['taxes_and_charges'].grid.update_docfield_property(
+			'included_in_print_rate', 'hidden', 1
+		);
+		frappe.model.set_value(cdt, cdn, 'description', "...");
+		frm.refresh_field('taxes_and_charges');
+	},
+
+	taxes_and_charges_add: function(frm,cdt,cdn){
+		frm.fields_dict['taxes_and_charges'].grid.update_docfield_property(
+			'included_in_print_rate', 'hidden', 1
+		);
+		frappe.model.set_value(cdt, cdn, 'description', "...");
+		frm.refresh_field('taxes_and_charges');
+	},
+    charge_type: function (frm, cdt, cdn) {
         let row = locals[cdt][cdn];
-        
         if (row.charge_type === "Actual") {
             frm.fields_dict['taxes_and_charges'].grid.update_docfield_property(
-                'rate', 'hidden', 1
+                'rate', 'read_only', 1
+            );
+            frm.fields_dict['taxes_and_charges'].grid.update_docfield_property(
+                'tax_amount', 'read_only', 0
+            );
+        } else if (row.charge_type === "On Net Total" || row.charge_type === "On Item Quantity") {
+            frm.fields_dict['taxes_and_charges'].grid.update_docfield_property(
+                'tax_amount', 'read_only', 1
+            );
+            frm.fields_dict['taxes_and_charges'].grid.update_docfield_property(
+                'rate', 'read_only', 0
+            );
+        } else {
+            frm.fields_dict['taxes_and_charges'].grid.update_docfield_property(
+                'rate', 'read_only', 0
+            );
+            frm.fields_dict['taxes_and_charges'].grid.update_docfield_property(
+                'tax_amount', 'read_only', 0
             );
         }
-		else if(row.charge_type === "On Net Total"){
-			frm.fields_dict['taxes_and_charges'].grid.update_docfield_property(
-                'tax_amount', 'hidden', 1
-            );
-		}
-        else{
-			frm.fields_dict['taxes_and_charges'].grid.update_docfield_property(
-				'rate', 'hidden', 0
-			);
-			frm.fields_dict['taxes_and_charges'].grid.update_docfield_property(
-                'tax_amount', 'hidden', 0
-            );
-		}
-        
         frm.refresh_field('taxes_and_charges');
     },
+    tax_amount: function (frm, cdt, cdn) {
+		let row = locals[cdt][cdn];
+		if (!row) return;
+		let previous_row_base_total = 0;
+		if (row.idx > 1) {
+			let previous_row = frm.doc.taxes_and_charges.find(r => r.idx === row.idx - 1);
+			previous_row_base_total = previous_row ? previous_row.base_total || 0 : 0;
+		} else {
+			previous_row_base_total = frm.doc.net_total || 0;
+		}
+		let updated_base_total = previous_row_base_total + (row.tax_amount || 0);
+		frappe.model.set_value(cdt, cdn, 'base_tax_amount', row.tax_amount || 0);
+		frappe.model.set_value(cdt, cdn, 'tax_amount_after_discount_amount', row.tax_amount || 0);
+		frappe.model.set_value(cdt, cdn, 'total', updated_base_total || 0);
+		frappe.model.set_value(cdt, cdn, 'base_total', updated_base_total || 0);
+		let tax_total = frm.doc.taxes_and_charges.reduce((sum, tax_row) => {
+			return sum + (tax_row.tax_amount || 0);
+		}, 0);
+	
+		frm.set_value('total_taxes_and_charges', tax_total || 0);
+	
+		frm.refresh_field('taxes_and_charges');
+		frm.refresh_field('total_taxes_and_charges');
+	},
+	
 
-	rate:function(frm, cdt, cdn){
-		
+	rate: function (frm, cdt, cdn) {
+		let row = locals[cdt][cdn];
+		if (!row) return;
+		let previous_row_base_total = 0;
+		if (row.idx > 1) {
+			let previous_row = frm.doc.taxes_and_charges.find(r => r.idx === row.idx - 1);
+			previous_row_base_total = previous_row ? previous_row.base_total || 0 : 0;
+		} else {
+			previous_row_base_total = frm.doc.total || 0;
+		}
+	
+		let calculated_value = 0;
+		if (row.charge_type === "On Net Total") {
+			calculated_value = (row.rate / 100) * frm.doc.total;
+		} else if (row.charge_type === "On Item Quantity") {
+			calculated_value = (row.rate / 100) * frm.doc.total_qty;
+		}
+	
+		const set_row_values = (total, include_in_net_total) => {
+			frappe.model.set_value(cdt, cdn, 'base_tax_amount', calculated_value || 0);
+			frappe.model.set_value(cdt, cdn, 'tax_amount', calculated_value || 0);
+			frappe.model.set_value(cdt, cdn, 'tax_amount_after_discount_amount', calculated_value || 0);
+			frappe.model.set_value(cdt, cdn, 'total', total || 0);
+			frappe.model.set_value(cdt, cdn, 'base_total', total || 0);
+	
+			if (include_in_net_total) {
+				let updated_net_total = frm.doc.net_total - calculated_value;
+				frappe.model.set_value("Proforma Invoice", frm.doc.name,'net_total', updated_net_total || 0);
+			}
+		};
+	
+		if (row.included_in_print_rate === 1) {
+			set_row_values(previous_row_base_total + calculated_value, true);
+		} else {
+			set_row_values(previous_row_base_total + calculated_value, false);
+		}
+	
+		frm.refresh_field('taxes_and_charges');
+	},
+
+	row_id: function (frm, cdt, cdn) {
+		let row = locals[cdt][cdn];
+		if(row.row_id == row.idx){
+			frappe.throw("Error")
+		}
+		else{
+			if(row.charge_type === "On Previous Row Amount"){
+				let data = frm.doc.taxes_and_charges;
+				let row_data = data[row.row_id - 1] 
+				frappe.model.set_value(cdt, cdn, 'base_tax_amount', (row_data.tax_amount * row.rate)/100 || 0);
+				frappe.model.set_value(cdt, cdn, 'tax_amount', (row_data.tax_amount * row.rate)/100 || 0);
+				let tax_total = frm.doc.taxes_and_charges.reduce((sum, tax_row) => {
+					return sum + (tax_row.tax_amount || 0);
+				}, 0);
+			
+				frm.set_value('total_taxes_and_charges', tax_total || 0);
+			
+				frm.refresh_field('taxes_and_charges');
+			}
+			if(row.charge_type === "On Previous Row Total"){
+				let data = frm.doc.taxes_and_charges;
+				let row_data = data[row.row_id - 1] 
+				frappe.model.set_value(cdt, cdn, 'base_tax_amount', (row_data.base_total * row.rate)/100 || 0);
+				frappe.model.set_value(cdt, cdn, 'tax_amount', (row_data.base_total * row.rate)/100 || 0);
+				let tax_total = frm.doc.taxes_and_charges.reduce((sum, tax_row) => {
+					return sum + (tax_row.tax_amount || 0);
+				}, 0);
+			
+				frm.set_value('total_taxes_and_charges', tax_total || 0);
+			
+				frm.refresh_field('taxes_and_charges');
+			}
+		}
 	}
 });
+
 
 function fetchItemData(frm, cdt, cdn, item_code) {
 	frappe.call({
