@@ -9,6 +9,7 @@ def create_proforma_invoice(sales_order):
     
     proforma_invoice = frappe.get_doc({
         "doctype": "Proforma Invoice",
+        "is_system_generated":1,
         "customer": sales_order_doc.customer,
         "department":sales_order_doc.department,
         "sales_order": sales_order_doc.name,
@@ -29,7 +30,7 @@ def create_proforma_invoice(sales_order):
             {
                 "item_code": item.item_code,
                 "item_name": item.item_name,
-                "amount": item.base_amount,
+                "amount": item.amount,
                 "base_amount": item.base_amount,
                 "uom": item.uom,
                 "description": item.description,
@@ -111,6 +112,22 @@ def create_sales_invoice(proforma_invoice):
             }
             for item in proforma_invoice_doc.items
         ],
+        'taxes':[
+            {
+                'charge_type': tax.charge_type,
+                'account_head': tax.account_head,
+                'description': tax.description,
+                'cost_center': tax.cost_center,
+                'department': tax.department,
+                'rate': tax.rate,
+                'account_currency': tax.account_currency,
+                'tax_amount': tax.tax_amount,
+                'total':tax.total,
+                'row_id': tax.row_id
+            }
+            for tax in proforma_invoice_doc.taxes_and_charges
+            ],
+        "total_taxes_and_charges":proforma_invoice_doc.total_taxes_and_charges,
         "custom_proforma_invoice": proforma_invoice_doc.name,
         "customer_address": proforma_invoice_doc.customer_address,
         "address_display": proforma_invoice_doc.address_display,
