@@ -11,14 +11,44 @@ frappe.ui.form.on("Sales Invoice", {
             }
         })
     },
-    on_submit: function(frm) {
-        if(frm.doc.custom_dependent_sales_order && frm.doc.custom_sales_order){
+    before_submit: function (frm) {
+        if (frm.doc.custom_dependent_sales_order && frm.doc.custom_sales_order) {
             frappe.call({
-                method:"envision_sales.envision_sales.doctype.proforma_invoice.proforma_invoice.update_outstanding_total_in_SO",
-                args:{
-                    sales_order:frm.doc.custom_sales_order,
-                    grand_total:frm.doc.net_total
+                method: "envision_sales.envision_sales.doctype.proforma_invoice.proforma_invoice.update_outstanding_total_in_SO",
+                args: {
+                    sales_order: frm.doc.custom_sales_order,
+                    grand_total: frm.doc.net_total
                 },
+                async: false, // Ensure the call is synchronous
+                callback: function (r) {
+                    if (r.message && r.message == "Error - Custom Outstanding Total cannot be negative") {
+                        frappe.msgprint({
+                            title: __("Validation Error"),
+                            message: __("The custom outstanding total will become negative. Cannot proceed."),
+                            indicator: "red"
+                        });
+                        frappe.validated = false; // Prevent the document from saving
+                    }
+                    else if (r.message && r.message == "Error- Sales Order or Grand Total not provided") {
+                        frappe.msgprint({
+                            title: __("Missing Error"),
+                            message: __("Sales Order or Grand Total not provided. Cannot proceed."),
+                            indicator: "red"
+                        });
+                        frappe.validated = false; // Prevent the document from saving
+                    }
+                    else if(r.message && r.message == "Error- Custom Outstanding Total field not set in Sales Order") {
+                        frappe.msgprint({
+                            title: __("Missing Error"),
+                            message: __("Outstanding Total field not set in Sales Order. Cannot proceed."),
+                            indicator: "red"
+                        });
+                        frappe.validated = false; // Prevent the document from saving
+                    }
+                    else {
+                        frappe.validated = true; // Allow the document to save
+                    }
+                }
             });
         }
     }
