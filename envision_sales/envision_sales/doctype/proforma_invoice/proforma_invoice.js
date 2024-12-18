@@ -312,11 +312,11 @@ frappe.ui.form.on("Sales Taxes and Charges", {
 			if(row.charge_type === "On Previous Row Total"){
 				let data = frm.doc.taxes_and_charges;
 				let row_data = data[row.row_id - 1] 
-				frappe.model.set_value(cdt, cdn, 'base_tax_amount', (row_data.tax_amount * row.rate)/100 || 0);
-				frappe.model.set_value(cdt, cdn, 'tax_amount', (row_data.tax_amount * row.rate)/100 || 0);
-				frappe.model.set_value(cdt, cdn, 'tax_amount_after_discount_amount', (row_data.tax_amount * row.rate)/100 || 0);
-				frappe.model.set_value(cdt, cdn, 'total', (row_data.tax_amount * row.rate)/100 || 0);
-				frappe.model.set_value(cdt, cdn, 'base_total', (row_data.tax_amount * row.rate)/100 || 0);
+				frappe.model.set_value(cdt, cdn, 'base_tax_amount', (row_data.base_total * row.rate)/100 || 0);
+				frappe.model.set_value(cdt, cdn, 'tax_amount', (row_data.base_total * row.rate)/100 || 0);
+				frappe.model.set_value(cdt, cdn, 'tax_amount_after_discount_amount', (row_data.base_total * row.rate)/100 || 0);
+				frappe.model.set_value(cdt, cdn, 'total', (row_data.base_total * row.rate)/100 || 0);
+				frappe.model.set_value(cdt, cdn, 'base_total', (row_data.base_total * row.rate)/100 || 0);
 				let tax_total = frm.doc.taxes_and_charges.reduce((sum, tax_row) => {
 					return sum + (tax_row.tax_amount || 0);
 				}, 0);
