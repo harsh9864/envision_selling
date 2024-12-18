@@ -279,32 +279,20 @@ frappe.ui.form.on("Sales Taxes and Charges", {
 			calculated_value = (row.rate / 100) * frm.doc.total_qty;
 		}
 	
-		const set_row_values = (total, include_in_net_total) => {
-			frappe.model.set_value(cdt, cdn, 'base_tax_amount', calculated_value || 0);
-			frappe.model.set_value(cdt, cdn, 'tax_amount', calculated_value || 0);
-			frappe.model.set_value(cdt, cdn, 'tax_amount_after_discount_amount', calculated_value || 0);
-			frappe.model.set_value(cdt, cdn, 'total', total || 0);
-			frappe.model.set_value(cdt, cdn, 'base_total', total || 0);
-	
-			if (include_in_net_total) {
-				let updated_net_total = frm.doc.net_total - calculated_value;
-				frappe.model.set_value("Proforma Invoice", frm.doc.name,'net_total', updated_net_total || 0);
-			}
-		};
-	
-		if (row.included_in_print_rate === 1) {
-			set_row_values(previous_row_base_total + calculated_value, true);
-		} else {
-			set_row_values(previous_row_base_total + calculated_value, false);
-		}
+		frappe.model.set_value(cdt, cdn, 'base_tax_amount', calculated_value || 0);
+		frappe.model.set_value(cdt, cdn, 'tax_amount', calculated_value || 0);
+		frappe.model.set_value(cdt, cdn, 'tax_amount_after_discount_amount', calculated_value || 0);
+		frappe.model.set_value(cdt, cdn, 'total', total || 0);
+		frappe.model.set_value(cdt, cdn, 'base_total', total || 0);
 	
 		frm.refresh_field('taxes_and_charges');
 	},
 
 	row_id: function (frm, cdt, cdn) {
 		let row = locals[cdt][cdn];
-		if(row.row_id == row.idx){
+		if(row.row_id == row.idx && row.row_id == 1){
 			frappe.throw("Error")
+			return 0;
 		}
 		else{
 			if(row.charge_type === "On Previous Row Amount"){
@@ -312,25 +300,27 @@ frappe.ui.form.on("Sales Taxes and Charges", {
 				let row_data = data[row.row_id - 1] 
 				frappe.model.set_value(cdt, cdn, 'base_tax_amount', (row_data.tax_amount * row.rate)/100 || 0);
 				frappe.model.set_value(cdt, cdn, 'tax_amount', (row_data.tax_amount * row.rate)/100 || 0);
+				frappe.model.set_value(cdt, cdn, 'tax_amount_after_discount_amount', (row_data.tax_amount * row.rate)/100 || 0);
+				frappe.model.set_value(cdt, cdn, 'total', (row_data.tax_amount * row.rate)/100 || 0);
+				frappe.model.set_value(cdt, cdn, 'base_total', (row_data.tax_amount * row.rate)/100 || 0);
 				let tax_total = frm.doc.taxes_and_charges.reduce((sum, tax_row) => {
 					return sum + (tax_row.tax_amount || 0);
 				}, 0);
-			
 				frm.set_value('total_taxes_and_charges', tax_total || 0);
-			
 				frm.refresh_field('taxes_and_charges');
 			}
 			if(row.charge_type === "On Previous Row Total"){
 				let data = frm.doc.taxes_and_charges;
 				let row_data = data[row.row_id - 1] 
-				frappe.model.set_value(cdt, cdn, 'base_tax_amount', (row_data.base_total * row.rate)/100 || 0);
-				frappe.model.set_value(cdt, cdn, 'tax_amount', (row_data.base_total * row.rate)/100 || 0);
+				frappe.model.set_value(cdt, cdn, 'base_tax_amount', (row_data.tax_amount * row.rate)/100 || 0);
+				frappe.model.set_value(cdt, cdn, 'tax_amount', (row_data.tax_amount * row.rate)/100 || 0);
+				frappe.model.set_value(cdt, cdn, 'tax_amount_after_discount_amount', (row_data.tax_amount * row.rate)/100 || 0);
+				frappe.model.set_value(cdt, cdn, 'total', (row_data.tax_amount * row.rate)/100 || 0);
+				frappe.model.set_value(cdt, cdn, 'base_total', (row_data.tax_amount * row.rate)/100 || 0);
 				let tax_total = frm.doc.taxes_and_charges.reduce((sum, tax_row) => {
 					return sum + (tax_row.tax_amount || 0);
 				}, 0);
-			
 				frm.set_value('total_taxes_and_charges', tax_total || 0);
-			
 				frm.refresh_field('taxes_and_charges');
 			}
 		}
@@ -348,11 +338,9 @@ function fetchItemData(frm, cdt, cdn, item_code) {
 		callback: function(response) {
 			if (response && response.message) {
 				const result_data = response.message;
-				console.log(result_data);
 				setItemFields(frm, cdt, cdn, result_data);
 				setAccountFields(frm, cdt, cdn, result_data);
 			} else {
-				console.log("Null");
 				frappe.model.set_value(cdt, cdn, 'item_code', '');  
 			}
 		}
@@ -396,7 +384,6 @@ async function setAccountFields(frm, cdt, cdn, result_data) {
                         data.expense_account || await getCompanyDefault(frm.doc.company, 'default_expense_account')
                     );
                 } else {
-                    // Call async setDefaultAccounts and wait for its result
                     const accounts = await setDefaultAccounts(frm, cdt, cdn);
                     console.log("Accounts fetched:", accounts);
                 }
@@ -415,20 +402,17 @@ async function setDefaultAccounts(frm, cdt, cdn) {
 
         const default_expense_account = expenseResponse.message.default_expense_account;
         const default_income_account = incomeResponse.message.default_income_account;
-		console.log(default_expense_account);
-		console.log(default_income_account);
         // Set the values in the child table
         frappe.model.set_value(cdt, cdn, 'expense_account', default_expense_account);
         frappe.model.set_value(cdt, cdn, 'income_account', default_income_account);
 
-        // Return the values as an object
         return {
             default_expense_account,
             default_income_account
         };
     } catch (error) {
         console.error("Error fetching default accounts:", error);
-        throw error; // Rethrow the error if needed
+        throw error;
     }
 }
 
@@ -477,16 +461,13 @@ function fetchCustomerAccount(customer,company){
 }
 
 function create_sales_invoice(proforma_invoice) {
-    // Make a server-side call to create a Sales Invoice based on the given Proforma Invoice
     frappe.call({
-        method: "envision_sales.public.py.sales_doc_creator.create_sales_invoice",  // Specify the method to be called
+        method: "envision_sales.public.py.sales_doc_creator.create_sales_invoice",
         args: {
-            proforma_invoice: proforma_invoice.name  // Pass the name of the Proforma Invoice as an argument
+            proforma_invoice: proforma_invoice.name,
         },
         callback: function(response) {
-            // This function runs after the server responds
             if (response.message) {
-                // If a Sales Invoice is successfully created, redirect to the newly created Sales Invoice
                 frappe.set_route("Form", "Sales Invoice", response.message);
             }
         }
@@ -499,59 +480,48 @@ function make_payment_amount(proforma_invoice) {
         title: 'Enter details',
         fields: [
             {
-                label: 'Payment Amount',  // Field for entering the payment amount
+                label: 'Payment Amount',
                 fieldname: 'payment_amount',
                 fieldtype: 'Currency'
             },
             {
-                label: 'Work Order',  // Field for entering/selecting the related Sales Order (work order)
+                label: 'Work Order',
                 fieldname: 'work_order',
                 fieldtype: 'Link',
                 options: 'Sales Order',
-                default: proforma_invoice.sales_order,  // Set the default to the sales order from the proforma_invoice
+                default: proforma_invoice.sales_order,
 				reqd: 1
             },
         ],
-        size: 'small',  // Size of the dialog
-        primary_action_label: 'Submit',  // Label for the primary button in the dialog
+        size: 'small', 
+        primary_action_label: 'Submit',
         primary_action(values) {
-            // This function is triggered when the user clicks the "Submit" button
             var amount = values.payment_amount;
-
-            // Check if the entered amount is greater than the outstanding amount
             if (amount > proforma_invoice.outstanding_amount) {
                 frappe.throw("Payment Amount should be less or equal to Proforma Invoice");
-				// Stop execution if amount is invalid
                 return 0;  
             }
-            // Check if the entered amount is zero
 			else if (amount == 0) {
 				frappe.throw("Payment Amount can't be zero");
-				return 0;  // Stop execution if amount is zero
+				return 0;
 			}
 
-            d.hide();  // Hide the dialog after successful validation
-            create_payment(proforma_invoice, amount);  // Call the function to create the payment
+            d.hide();
+            create_payment(proforma_invoice, amount);
         }
     });
-
-    d.show();  // Show the dialog to the user
+    d.show();
 }
 
 function create_payment(proforma_invoice, amount) {
-    // Call the server-side method to create a Payment Entry
     frappe.call({
-        method: "envision_sales.public.py.sales_doc_creator.create_payment_entry",  // Method to create payment entry
+        method: "envision_sales.public.py.sales_doc_creator.create_payment_entry",
         args: {
-            proforma_invoice: proforma_invoice.name,  // Pass the proforma invoice name as an argument
-            amount: amount,  // Pass the payment amount
-            sales_order: proforma_invoice.sales_order  // Pass the associated sales order
+            proforma_invoice: proforma_invoice.name,
+            sales_order: proforma_invoice.sales_order,
         },
         callback: function(response) {
-            // This function runs after the server responds
             if (response.message) {
-                // If a Payment Entry was successfully created, navigate to its form
-				
                 frappe.set_route("Form", "Payment Entry", response.message);
             }
         }
