@@ -276,7 +276,7 @@ frappe.ui.form.on("Sales Taxes and Charges", {
 		if (row.charge_type === "On Net Total") {
 			calculated_value = (row.rate / 100) * frm.doc.total;
 		} else if (row.charge_type === "On Item Quantity") {
-			calculated_value = (row.rate / 100) * frm.doc.total_qty;
+			calculated_value = (row.rate) * frm.doc.total_qty;
 		}
 	
 		frappe.model.set_value(cdt, cdn, 'base_tax_amount', calculated_value || 0);
